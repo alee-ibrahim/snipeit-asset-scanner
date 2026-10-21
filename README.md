@@ -15,7 +15,7 @@ A Progressive Web App (PWA) for performing physical asset audits with Snipe-IT. 
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 22+
 - Access to a Snipe-IT instance
 - Snipe-IT Personal API Token with appropriate permissions
 
