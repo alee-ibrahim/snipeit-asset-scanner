@@ -5,11 +5,14 @@ WORKDIR /app
 # Install dependencies for better-sqlite3
 RUN apk add --no-cache python3 make g++
 
-# Copy package files
-COPY package*.json ./
+# Install pnpm
+RUN npm install -g pnpm@12.21.0
 
-# Install dependencies
-RUN npm ci --omit=dev
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install production dependencies
+RUN pnpm install --frozen-lockfile --prod
 
 # Copy application files
 COPY server.js ./

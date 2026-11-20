@@ -25,7 +25,7 @@ A Progressive Web App (PWA) for performing physical asset audits with Snipe-IT. 
 
 2. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Copy the example environment file:
@@ -47,7 +47,7 @@ A Progressive Web App (PWA) for performing physical asset audits with Snipe-IT. 
 
 6. Start the server:
    ```bash
-   npm start
+   pnpm start
    ```
 
 ## Configuration
