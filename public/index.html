@@ -179,6 +179,51 @@
       .actions { grid-template-columns: 1fr 1fr; }
       .actions .tile.noqr { grid-column: span 2; }
     }
+    /* Compact phones */
+    @media (max-width: 480px) {
+      .appbar { padding: calc(6px + env(safe-area-inset-top)) var(--space-3) 6px; }
+      .appbar .brand { font-size: 1rem; }
+      .avatar-btn { width: 44px; height: 44px; font-size: .875rem; }
+      .wrap { padding: var(--space-3); gap: var(--space-3); }
+      .stack { gap: var(--space-2); }
+      .setup-hero { padding: var(--space-3) var(--space-2) var(--space-2); }
+      .setup-hero .logo { width: 52px; height: 52px; border-radius: 14px; }
+      .setup-hero h1 { font-size: 1.25rem; }
+      .location-btn { min-height: 52px; padding: var(--space-2) var(--space-3); gap: var(--space-2); border-radius: 10px; }
+      .location-btn .pin { width: 32px; height: 32px; border-radius: 8px; }
+      .location-btn .lbl { font-size: .6875rem; }
+      .location-btn .val { font-size: .9375rem; }
+      .session-line { font-size: .8125rem; }
+      .viewport { aspect-ratio: 4 / 5; max-height: 52dvh; border-radius: 14px; }
+      .viewport .idle { gap: var(--space-3); padding: var(--space-4); }
+      .viewport .idle p { font-size: .875rem; }
+      .viewport .idle .btn { min-width: 0; }
+      .frame { width: 68%; }
+      .frame i { width: 30px; height: 30px; border-width: 3px; }
+      .pill { padding: 6px 12px; font-size: .8125rem; }
+      .cam-hint { bottom: 72px; }
+      .cam-controls { padding: 8px; gap: 8px; }
+      .cam-btn { width: 44px; height: 44px; }
+      .actions { gap: var(--space-2); }
+      .tile { min-height: 72px; padding: var(--space-2) 4px; gap: 4px; font-size: .8125rem; border-radius: 10px; }
+      .tile .ico { width: 32px; height: 32px; border-radius: 8px; }
+      .status-banner { padding: var(--space-3); gap: var(--space-2); border-radius: 10px; }
+      .status-banner h2 { font-size: 1.0625rem; }
+      .status-banner p { font-size: .875rem; }
+      .asset-head .tag { font-size: .8125rem; }
+      .asset-head .name { font-size: 1.0625rem; }
+      .kv { gap: 6px var(--space-3); margin-top: var(--space-2); font-size: .875rem; }
+      .success { padding: var(--space-4) var(--space-3); }
+      .success .big { width: 56px; height: 56px; margin-bottom: var(--space-2); }
+      .success h2 { font-size: 1.125rem; }
+      .success p { margin: 4px 0 var(--space-3); font-size: .875rem; }
+      .loc-list li button { min-height: 44px; font-size: .9375rem; }
+      .photo-drop { min-height: 108px; border-radius: 10px; font-size: .875rem; }
+      .photo-drop img { max-height: 170px; }
+      .photo-meta { margin-top: 2px; font-size: .75rem; }
+      .lookup { padding: 8px 10px; font-size: .8125rem; }
+      .menu-user .avatar-lg { width: 40px; height: 40px; }
+    }
   </style>
 </head>
 <body>

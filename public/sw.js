@@ -1,5 +1,5 @@
 // Bump CACHE_NAME on every UI release so installed PWAs drop old assets.
-const CACHE_NAME = 'snipeit-scanner-v2';
+const CACHE_NAME = 'snipeit-scanner-v3';
 const urlsToCache = [
   '/',
   '/admin',

@@ -167,3 +167,28 @@ dialog.sheet[open] { animation: sheet-in .2s var(--ease); display: flex; flex-di
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Compact layout for phones: tighter cards, smaller type, touch targets stay >= 44px */
+@media (max-width: 480px) {
+  :root { --tap: 44px; }
+  body { font-size: 15px; }
+  .card { padding: var(--space-3); border-radius: 10px; }
+  .card-title { font-size: 1rem; }
+  .btn { font-size: .9375rem; padding: 0 var(--space-3); }
+  .btn-lg { min-height: 48px; font-size: 1rem; border-radius: 10px; }
+  .btn-sm { min-height: 44px; }
+  .field { gap: 4px; margin-bottom: var(--space-3); }
+  .field label { font-size: .8125rem; }
+  .field .help { font-size: .75rem; }
+  .input, .select, .textarea { padding: 8px 12px; font-size: 16px; } /* 16px avoids iOS zoom on focus */
+  .textarea { min-height: 64px; }
+  .alert { padding: var(--space-2) var(--space-3); font-size: .875rem; }
+  .badge { font-size: .6875rem; padding: 1px 8px; }
+  .icon-xl { width: 32px; height: 32px; }
+  .icon-lg { width: 24px; height: 24px; }
+  .sheet-head { padding: var(--space-3) var(--space-3) var(--space-1); }
+  .sheet-head h2 { font-size: 1.0625rem; }
+  .sheet-body { padding: var(--space-1) var(--space-3) var(--space-3); }
+  .sheet-foot { gap: var(--space-2); padding: var(--space-2) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom)); }
+  .toast { padding: 10px 14px; font-size: .875rem; }
+}
