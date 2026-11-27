@@ -1,11 +1,14 @@
 {
   "name": "snipeit-asset-scanner",
   "version": "1.0.0",
-  "packageManager": "pnpm@12.21.0",
+  "packageManager": "pnpm@12.23.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "build": "pnpm --filter web build",
+    "dev": "pnpm run \"/^dev:/\"",
+    "dev:server": "node --watch server.js",
+    "dev:web": "pnpm --filter web dev"
   },
   "keywords": [
     "snipe-it",
@@ -23,7 +26,6 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.10",
     "express": "^5.3.0",
-    "html5-qrcode": "^2.3.8",
     "xlsx": "^0.18.5"
   }
 }

@@ -6,6 +6,9 @@
 # Database
 db/*.db
 db/*.db-journal
+db/*.db-wal
+db/*.db-shm
+db/photos/
 
 # Dependencies
 node_modules/
@@ -27,3 +30,4 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+web/dist/
