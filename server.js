@@ -27,12 +27,18 @@ const assetCache = {
 app.use(cors());
 // Photos arrive as base64 data URLs (~1600px JPEG, usually < 1 MB), so allow larger JSON bodies
 app.use(express.json({ limit: '15mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
-// Self-hosted QR decoder (zxing-wasm), served from node_modules so it works offline / without a CDN
-app.use('/vendor/zxing-wasm', express.static(path.join(__dirname, 'node_modules', 'zxing-wasm', 'dist'), {
-  maxAge: '7d',
+// Built React frontend (web/ -> web/dist via `pnpm build`). Hashed assets are immutable;
+// HTML, the service worker and the manifest must always revalidate so PWA updates land.
+const WEB_DIST = path.join(__dirname, 'web', 'dist');
+app.use(express.static(WEB_DIST, {
+  index: false,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.wasm')) res.setHeader('Content-Type', 'application/wasm');
+    if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
   }
 }));
 
@@ -1023,12 +1029,14 @@ app.delete('/api/audits/:id', (req, res) => {
 
 // Serve the main app
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(WEB_DIST, 'index.html'));
 });
 
 // Serve admin dashboard
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(WEB_DIST, 'admin.html'));
 });
 
 app.listen(PORT, () => {

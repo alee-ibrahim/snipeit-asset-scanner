@@ -17,40 +17,37 @@ A Progressive Web App (PWA) for performing physical asset audits with Snipe-IT. 
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 26 LTS and pnpm 12 (pinned in `mise.toml`: `mise install`)
 - Access to a Snipe-IT instance
 - Snipe-IT Personal API Token with appropriate permissions
 
-## Installation
+## Stack
 
-1. Clone or download this repository
+- **Server**: Express 5 + better-sqlite3 (`server.js`), unchanged API
+- **Frontend** (`web/`): Vite 8 + React 19 + TypeScript 7 + Tailwind CSS 4 + official [shadcn/ui](https://ui.shadcn.com) components (radix-nova style, CSS-variable theme), TanStack Table for the admin tables, Sonner toasts
+- **PWA**: `vite-plugin-pwa` (Workbox `generateSW`): installable, precaches the app shell and the QR decoder wasm, auto-updates
+- **Decoder**: zxing-wasm in a Web Worker + native `BarcodeDetector` (see [Scanner engine](#scanner-engine))
+- pnpm workspace: root = server, `web/` = frontend, one `pnpm-lock.yaml`
 
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+## Development
 
-3. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+pnpm install          # installs server + web (workspace)
+cp .env.example .env  # set SNIPEIT_URL and ADMIN_PASSWORD
+pnpm dev              # Express on :3000 (node --watch) + Vite dev server on :5173 (proxies /api)
+```
 
-4. Edit `.env` with your configuration:
-   ```
-   PORT=3000
-   SNIPEIT_URL=https://your-snipeit-instance.com
-   ADMIN_PASSWORD=your-secure-password
-   ```
+Open `http://localhost:5173` (scanner) and `http://localhost:5173/admin` (admin). Camera access needs HTTPS or `localhost`.
 
-5. Create the database directory:
-   ```bash
-   mkdir db
-   ```
+Add shadcn components with `pnpm dlx shadcn@latest add <component>` from `web/`.
 
-6. Start the server:
-   ```bash
-   pnpm start
-   ```
+## Build and run
+
+```bash
+pnpm build   # type-checks and builds web/ into web/dist
+pnpm start   # Express serves web/dist plus the API on PORT (default 3000)
+```
+
 
 ## Configuration
 
@@ -133,8 +130,8 @@ A Progressive Web App (PWA) for performing physical asset audits with Snipe-IT. 
 
 ## Scanner engine
 
-The scanner uses [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) (ZXing-C++ compiled to WebAssembly), self-hosted from
-`node_modules` at `/vendor/zxing-wasm` - no CDN needed. Decoding runs in a Web Worker so the preview stays smooth.
+The scanner uses [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) (ZXing-C++ compiled to WebAssembly), bundled by Vite
+(no CDN) and run in a Web Worker so the preview stays smooth. Code: `web/src/lib/scanner/` (`qr-scanner.ts`, `decoder.worker.ts`), React hook `web/src/hooks/use-scanner.ts`.
 
 - **Camera**: ideal 1920x1080, continuous autofocus, torch toggle, zoom slider and tap-to-focus where the device supports them, and a camera switch button on phones with several rear cameras (the choice is remembered).
 - **Whole frame**: no small scan box - the overlay is only a guide.
@@ -200,9 +197,10 @@ Required permissions:
 
 3. Access the app at `http://localhost:3000`
 
-No new environment variables or volumes: the `scanner-data` volume (mounted at `/app/db`) now also holds `photos/`.
-Rebuild the image after upgrading (`docker-compose up -d --build`) so `zxing-wasm` is installed. Camera access needs HTTPS
-(or `localhost`), e.g. via the Cloudflare Tunnel below.
+The Dockerfile is multi-stage: it builds `web/` with pnpm, installs the server's production dependencies (with the
+toolchain better-sqlite3 needs), then copies both into a slim `node:26-alpine` runtime. No new environment variables or
+volumes: the `scanner-data` volume (mounted at `/app/db`) holds `audits.db` and `photos/`. Rebuild after upgrading
+(`docker-compose up -d --build`). Camera access needs HTTPS (or `localhost`), e.g. via the Cloudflare Tunnel below.
 
 ### Using Docker directly
 
@@ -229,24 +227,26 @@ cloudflared tunnel --url http://localhost:3000
 
 ```
 snipe-it-scan/
-├── server.js           # Express server with API endpoints
-├── package.json        # Node.js dependencies
-├── .env                # Configuration (not in git)
-├── .env.example        # Example configuration
-├── .gitignore          # Git ignore rules
-├── db/
-│   ├── audits.db       # SQLite database (created on first run)
-│   └── photos/         # No-QR asset photos
-└── public/
-    ├── index.html      # Scanner PWA
-    ├── admin.html      # Admin dashboard
-    ├── css/base.css    # Shared design tokens + components
-    ├── js/scanner.js   # Camera + scan loop (BarcodeDetector + zxing passes)
-    ├── js/decoder-worker.js  # zxing-wasm decoder + image preprocessing (Web Worker)
-    ├── icons.svg       # SVG icon sprite (Lucide)
-    ├── manifest.json   # PWA manifest
-    └── sw.js           # Service worker (bump CACHE_NAME on UI releases)
+├── server.js               # Express API + serves web/dist
+├── package.json            # server deps + workspace scripts (dev, build, start)
+├── pnpm-workspace.yaml     # workspace (web/) + allowed native builds
+├── mise.toml               # node + pnpm versions
+├── Dockerfile              # multi-stage: build web -> server deps -> slim runtime
+├── db/                     # volume: audits.db + photos/
+└── web/                    # React frontend
+    ├── index.html          # scanner entry (/)
+    ├── admin.html          # admin entry (/admin)
+    ├── vite.config.ts      # multi-page build, PWA, /api dev proxy
+    ├── components.json     # shadcn/ui config
+    ├── public/             # PWA icons
+    └── src/
+        ├── components/ui/  # shadcn/ui components (generated by the shadcn CLI)
+        ├── hooks/          # use-scanner, use-confirm
+        ├── lib/            # api client, helpers, scanner engine + decoder worker
+        ├── scanner/        # scanner app (camera, result, no-QR, location drawer...)
+        └── admin/          # admin app (audits, No-QR, unaudited tabs, data table)
 ```
+
 
 ## License
 
