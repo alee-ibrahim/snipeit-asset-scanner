@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { CameraIcon, CircleCheckIcon, PackageIcon, RefreshCwIcon } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { toast } from 'sonner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
@@ -11,14 +11,12 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError, type Asset, type Location, type ManualAsset } from '@/lib/api'
 import { compressImage } from '@/lib/helpers'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 
 interface Props {
   open: boolean
@@ -39,7 +37,7 @@ export function NoQrDrawer({ open, onOpenChange, token, location, userName, onSa
   const [photo, setPhoto] = useState<{ dataUrl: string; label: string } | null>(null)
   const [processing, setProcessing] = useState(false)
   const [lookup, setLookup] = useState<Lookup>({ state: 'idle' })
-  const [error, setError] = useState<{ msg: string; field?: 'number' | 'desc' | 'photo' } | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const seq = useRef(0)
@@ -74,8 +72,7 @@ export function NoQrDrawer({ open, onOpenChange, token, location, userName, onSa
     setProcessing(true)
     try {
       const r = await compressImage(file)
-      setPhoto({ dataUrl: r.dataUrl, label: `${r.width}×${r.height} · ${Math.round(r.bytes / 1024)} KB` })
-      if (error?.field === 'photo') setError(null)
+      setPhoto({ dataUrl: r.dataUrl, label: `${r.width}×${r.height}, ${Math.round(r.bytes / 1024)} KB` })
     } catch {
       toast.error('Could not read that photo. Try again.')
     } finally {
@@ -85,10 +82,10 @@ export function NoQrDrawer({ open, onOpenChange, token, location, userName, onSa
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!number.trim()) return setError({ msg: 'Enter the asset number.', field: 'number' })
-    if (!desc.trim()) return setError({ msg: 'Add a short description.', field: 'desc' })
-    if (!photo) return setError({ msg: 'Take a photo of the asset.', field: 'photo' })
-    if (!location) return setError({ msg: 'Choose your location first.' })
+    if (!number.trim()) return setError('Enter the asset number.')
+    if (!desc.trim()) return setError('Add a short description.')
+    if (!photo) return setError('Take a photo of the asset.')
+    if (!location) return setError('Choose your location first.')
     setError(null)
     setSaving(true)
     try {
@@ -104,7 +101,7 @@ export function NoQrDrawer({ open, onOpenChange, token, location, userName, onSa
       onOpenChange(false)
       onSaved(record)
     } catch (err) {
-      setError({ msg: (err as Error).message })
+      setError((err as Error).message)
     } finally {
       setSaving(false)
     }
@@ -112,95 +109,69 @@ export function NoQrDrawer({ open, onOpenChange, token, location, userName, onSa
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
-      <DrawerContent className="max-h-[92dvh]">
-        <form onSubmit={submit} noValidate className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
-          <DrawerHeader className="pb-1">
+      <DrawerContent>
+        <form onSubmit={submit} noValidate className="mx-auto flex w-full max-w-lg flex-col overflow-y-auto">
+          <DrawerHeader>
             <DrawerTitle>Add asset without QR</DrawerTitle>
-            <DrawerDescription>{location ? `${location.name} · ${userName}` : 'Choose a location first'}</DrawerDescription>
+            <DrawerDescription>{location ? `${location.name}, ${userName}` : 'Choose a location first'}</DrawerDescription>
           </DrawerHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-2">
-            <FieldGroup className="gap-3">
-              <Field data-invalid={error?.field === 'number' || undefined}>
-                <FieldLabel htmlFor="noqr-number">Asset number</FieldLabel>
-                <Input id="noqr-number" className="h-11" autoComplete="off" autoCapitalize="characters"
-                  placeholder="Asset tag, SAP # or number on the item" value={number}
-                  aria-invalid={error?.field === 'number' || undefined}
-                  onChange={(e) => setNumber(e.target.value)} />
-                {lookup.state !== 'idle' && (
-                  <Alert
-                    aria-live="polite"
-                    className={cn('py-2 text-sm',
-                      lookup.state === 'found' && 'border-success/40 bg-success/10 text-success',
-                      lookup.state === 'missing' && 'border-warning/40 bg-warning/10 text-warning')}
-                  >
-                    {lookup.state === 'busy' && <Spinner />}
-                    {lookup.state === 'found' && <CircleCheckIcon />}
-                    {lookup.state === 'missing' && <PackageIcon />}
-                    <AlertDescription className="text-current">
-                      {lookup.state === 'busy' && 'Checking Snipe-IT…'}
-                      {lookup.state === 'error' && 'Could not check Snipe-IT right now. You can still save.'}
-                      {lookup.state === 'missing' && <span>Not in Snipe-IT. It will be saved as an <strong className="text-foreground">unregistered asset</strong> for admin review.</span>}
-                      {lookup.state === 'found' && (
-                        <span>
-                          Found: <strong className="text-foreground">{lookup.asset.name || lookup.asset.model?.name || lookup.asset.asset_tag}</strong>{' '}
-                          ({lookup.asset.asset_tag}), recorded at {lookup.asset.location?.name || 'no location'}. The audit and photo will be added to it.
-                        </span>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </Field>
-
-              <Field data-invalid={error?.field === 'desc' || undefined}>
-                <FieldLabel htmlFor="noqr-desc">Description</FieldLabel>
-                <Input id="noqr-desc" className="h-11" autoComplete="off" placeholder={'e.g. Dell monitor 24", black office chair'}
-                  value={desc} aria-invalid={error?.field === 'desc' || undefined} onChange={(e) => setDesc(e.target.value)} />
-              </Field>
-
-              <Field data-invalid={error?.field === 'photo' || undefined}>
-                <FieldLabel>Photo of the asset</FieldLabel>
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = '' }} />
-                {photo ? (
-                  <div className="overflow-hidden rounded-lg border">
-                    <img src={photo.dataUrl} alt="Photo of the asset" className="max-h-44 w-full bg-slate-950 object-contain" />
-                    <div className="flex items-center justify-between gap-2 px-3 py-1">
-                      <FieldDescription className="text-xs">{photo.label}</FieldDescription>
-                      <Button type="button" variant="ghost" size="touch" onClick={() => fileRef.current?.click()}>
-                        <RefreshCwIcon /> Retake
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button type="button" variant="outline" disabled={processing} onClick={() => fileRef.current?.click()}
-                    className={cn('h-28 w-full flex-col gap-1 border-2 border-dashed text-muted-foreground', error?.field === 'photo' && 'border-destructive')}>
-                    {processing ? <Spinner className="size-6" /> : <CameraIcon className="size-6" />}
-                    {processing ? 'Processing photo…' : 'Tap to take a photo'}
-                  </Button>
-                )}
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="noqr-notes">Notes <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
-                <Textarea id="noqr-notes" rows={2} placeholder="Condition, where exactly, etc." value={notes} onChange={(e) => setNotes(e.target.value)} />
-              </Field>
-
-              {error && (
-                <Alert variant="destructive" role="alert" className="py-2">
-                  <AlertDescription>{error.msg}</AlertDescription>
+          <div className="grid gap-4 px-4">
+            <div className="grid gap-2">
+              <Label htmlFor="noqr-number">Asset number</Label>
+              <Input id="noqr-number" autoComplete="off" autoCapitalize="characters" placeholder="Asset tag, SAP # or number on the item"
+                value={number} onChange={(e) => setNumber(e.target.value)} />
+              {lookup.state === 'busy' && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> Checking Snipe-IT…</p>}
+              {lookup.state === 'error' && <p className="text-sm text-muted-foreground">Could not check Snipe-IT right now. You can still save.</p>}
+              {lookup.state === 'found' && (
+                <Alert>
+                  <AlertTitle>Found in Snipe-IT</AlertTitle>
+                  <AlertDescription>
+                    {lookup.asset.name || lookup.asset.model?.name || lookup.asset.asset_tag} ({lookup.asset.asset_tag}), recorded at {lookup.asset.location?.name || 'no location'}. The audit and photo will be added to it.
+                  </AlertDescription>
                 </Alert>
               )}
-            </FieldGroup>
+              {lookup.state === 'missing' && (
+                <Alert>
+                  <AlertTitle>Not in Snipe-IT</AlertTitle>
+                  <AlertDescription>It will be saved as an unregistered asset for admin review.</AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="noqr-desc">Description</Label>
+              <Input id="noqr-desc" autoComplete="off" placeholder={'e.g. Dell monitor 24", black office chair'} value={desc} onChange={(e) => setDesc(e.target.value)} />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="noqr-photo">Photo of the asset</Label>
+              <input ref={fileRef} id="noqr-photo" type="file" accept="image/*" capture="environment" className="hidden"
+                onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = '' }} />
+              {photo && <img src={photo.dataUrl} alt="Photo of the asset" className="max-h-48 w-full rounded-md border object-contain" />}
+              <Button type="button" variant="outline" disabled={processing} onClick={() => fileRef.current?.click()}>
+                {processing && <Spinner />} {photo ? 'Retake photo' : 'Take photo'}
+              </Button>
+              {photo && <p className="text-sm text-muted-foreground">{photo.label}</p>}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="noqr-notes">Notes (optional)</Label>
+              <Textarea id="noqr-notes" placeholder="Condition, where exactly, etc." value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+
+            {error && (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </div>
 
-          <DrawerFooter className="flex-row border-t pt-3 pb-[max(env(safe-area-inset-bottom),1rem)]">
+          <DrawerFooter>
+            <Button type="submit" disabled={saving}>{saving && <Spinner />} Save</Button>
             <DrawerClose asChild>
-              <Button type="button" variant="outline" size="touch" className="flex-1">Cancel</Button>
+              <Button type="button" variant="outline">Cancel</Button>
             </DrawerClose>
-            <Button type="submit" size="touch" disabled={saving} className="flex-1 bg-success text-success-foreground hover:bg-success/90">
-              {saving && <Spinner />} Save
-            </Button>
           </DrawerFooter>
         </form>
       </DrawerContent>

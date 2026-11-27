@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { SearchIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
@@ -10,8 +9,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 
 interface Props {
@@ -31,7 +30,7 @@ export function ManualEntryDrawer({ open, onOpenChange, onSearch }: Props) {
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     const q = query.trim()
-    if (!q) { setError('Enter an asset tag or SAP number'); return }
+    if (!q) { setError('Enter an asset tag or SAP number.'); return }
     setBusy(true)
     setError(null)
     try {
@@ -47,36 +46,22 @@ export function ManualEntryDrawer({ open, onOpenChange, onSearch }: Props) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
       <DrawerContent>
-        <form onSubmit={submit} className="mx-auto flex w-full max-w-lg flex-col">
-          <DrawerHeader className="pb-2">
+        <form onSubmit={submit} className="mx-auto w-full max-w-lg">
+          <DrawerHeader>
             <DrawerTitle>Type asset tag or SAP #</DrawerTitle>
             <DrawerDescription>Works with asset tags and SAP asset numbers.</DrawerDescription>
           </DrawerHeader>
-          <div className="px-4">
-            <Field data-invalid={!!error || undefined}>
-              <FieldLabel htmlFor="manual-query">Asset tag or SAP number</FieldLabel>
-              <Input
-                id="manual-query"
-                autoFocus
-                autoComplete="off"
-                autoCapitalize="characters"
-                enterKeyHint="search"
-                placeholder="e.g. MJ-00123 or 400012345"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-invalid={!!error || undefined}
-                className="h-11"
-              />
-              {error && <FieldError>{error}</FieldError>}
-            </Field>
+          <div className="grid gap-2 px-4">
+            <Label htmlFor="manual-query">Asset tag or SAP number</Label>
+            <Input id="manual-query" autoFocus autoComplete="off" autoCapitalize="characters" enterKeyHint="search"
+              placeholder="e.g. MJ-00123 or 400012345" value={query} onChange={(e) => setQuery(e.target.value)} aria-invalid={!!error || undefined} />
+            {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           </div>
-          <DrawerFooter className="flex-row pb-[max(env(safe-area-inset-bottom),1rem)]">
+          <DrawerFooter>
+            <Button type="submit" disabled={busy}>{busy && <Spinner />} Find asset</Button>
             <DrawerClose asChild>
-              <Button type="button" variant="outline" size="touch" className="flex-1">Cancel</Button>
+              <Button type="button" variant="outline">Cancel</Button>
             </DrawerClose>
-            <Button type="submit" size="touch" disabled={busy} className="flex-1">
-              {busy ? <Spinner /> : <SearchIcon />} Find asset
-            </Button>
           </DrawerFooter>
         </form>
       </DrawerContent>

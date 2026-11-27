@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { ExternalLinkIcon, RefreshCwIcon, SearchIcon, Trash2Icon } from 'lucide-react'
+import { Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { useConfirm } from '@/hooks/use-confirm'
 import { adminApi, type ManualAsset } from '@/lib/api'
 import { formatDate } from '@/lib/helpers'
-import { cn } from '@/lib/utils'
 import { DataTable, SortHeader } from '../components/data-table'
-import { StatCard, StatusBadgeClass } from '../components/stat-card'
 
 interface Props {
   password: string
@@ -20,10 +20,8 @@ interface Props {
   confirm: ReturnType<typeof useConfirm>['confirm']
 }
 
-type Filter = 'all' | 'registered' | 'unregistered'
-
 export function NoQrTab({ password, records, reload, confirm }: Props) {
-  const [filter, setFilter] = useState<Filter>('all')
+  const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [preview, setPreview] = useState<ManualAsset | null>(null)
 
@@ -51,21 +49,23 @@ export function NoQrTab({ password, records, reload, confirm }: Props) {
       id: 'photo',
       header: 'Photo',
       enableSorting: false,
-      cell: ({ row }) => row.original.photo_url ? (
-        <Button variant="ghost" className="size-11 overflow-hidden rounded-md p-0" aria-label={`View photo of ${row.original.asset_number}`} onClick={() => setPreview(row.original)}>
-          <img src={row.original.photo_url} alt="" loading="lazy" className="size-11 rounded-md border object-cover" />
-        </Button>
-      ) : <span className="text-muted-foreground">–</span>,
+      cell: ({ row }) => row.original.photo_url
+        ? (
+          <Button variant="outline" size="icon-lg" className="overflow-hidden p-0" onClick={() => setPreview(row.original)} aria-label={`View photo of ${row.original.asset_number}`}>
+            <img src={row.original.photo_url} alt="" loading="lazy" className="size-full object-cover" />
+          </Button>
+        )
+        : '–',
     },
-    { accessorKey: 'created_at', header: ({ column }) => <SortHeader column={column} title="Date" />, cell: ({ row }) => <span className="whitespace-nowrap">{formatDate(row.original.created_at, true)}</span> },
-    { accessorKey: 'asset_number', header: ({ column }) => <SortHeader column={column} title="Asset number" />, cell: ({ row }) => <span className="font-mono font-semibold whitespace-nowrap">{row.original.asset_number}</span> },
+    { accessorKey: 'created_at', header: ({ column }) => <SortHeader column={column} title="Date" />, cell: ({ row }) => formatDate(row.original.created_at, true) },
+    { accessorKey: 'asset_number', header: ({ column }) => <SortHeader column={column} title="Asset number" /> },
     {
       accessorKey: 'description',
       header: ({ column }) => <SortHeader column={column} title="Description" />,
       cell: ({ row }) => (
-        <div className="min-w-36">
+        <div>
           <div>{row.original.description}</div>
-          {row.original.notes && <div className="text-[11px] text-muted-foreground">{row.original.notes}</div>}
+          {row.original.notes && <div className="text-xs text-muted-foreground">{row.original.notes}</div>}
         </div>
       ),
     },
@@ -74,12 +74,12 @@ export function NoQrTab({ password, records, reload, confirm }: Props) {
       header: ({ column }) => <SortHeader column={column} title="Snipe-IT" />,
       cell: ({ row }) => {
         const r = row.original
-        if (!r.registered) return <Badge variant="outline" className="border-warning/40 bg-warning/10 text-warning uppercase">Unregistered</Badge>
+        if (!r.registered) return <Badge variant="outline">Unregistered</Badge>
         return (
-          <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
-            <Badge variant="outline" className="border-success/40 bg-success/10 text-success uppercase">Registered</Badge>
-            <span className="text-[11px] text-muted-foreground">{r.snipeit_asset_tag}{r.snipeit_asset_name ? ` · ${r.snipeit_asset_name}` : ''}</span>
-            <span className="text-[11px] text-muted-foreground">Audit {r.snipeit_audit_posted ? 'posted' : 'not posted'} · photo {r.snipeit_photo_uploaded ? 'attached' : 'not attached'}</span>
+          <div className="flex flex-col items-start gap-1">
+            <Badge variant="secondary">Registered</Badge>
+            <span className="text-xs text-muted-foreground">{r.snipeit_asset_tag}{r.snipeit_asset_name ? `, ${r.snipeit_asset_name}` : ''}</span>
+            <span className="text-xs text-muted-foreground">Audit {r.snipeit_audit_posted ? 'posted' : 'not posted'}, photo {r.snipeit_photo_uploaded ? 'attached' : 'not attached'}</span>
           </div>
         )
       },
@@ -89,40 +89,52 @@ export function NoQrTab({ password, records, reload, confirm }: Props) {
       accessorKey: 'audit_status',
       header: ({ column }) => <SortHeader column={column} title="Location check" />,
       cell: ({ row }) => row.original.audit_status ? (
-        <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
-          <Badge variant="outline" className={cn('uppercase', StatusBadgeClass(row.original.audit_status))}>{row.original.audit_status}</Badge>
-          {row.original.expected_location_name && <span className="text-[11px] text-muted-foreground">recorded: {row.original.expected_location_name}</span>}
+        <div className="flex flex-col items-start gap-1">
+          <Badge variant={row.original.audit_status === 'match' ? 'default' : 'destructive'}>{row.original.audit_status}</Badge>
+          {row.original.expected_location_name && <span className="text-xs text-muted-foreground">recorded: {row.original.expected_location_name}</span>}
         </div>
-      ) : <span className="text-muted-foreground">–</span>,
+      ) : '–',
     },
     { accessorKey: 'user_name', header: ({ column }) => <SortHeader column={column} title="Recorded by" />, cell: ({ row }) => row.original.user_name || '–' },
     {
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => <Button size="icon" variant="destructive" className="size-9" aria-label="Delete" onClick={() => void remove(row.original.id)}><Trash2Icon /></Button>,
+      cell: ({ row }) => <Button size="icon-sm" variant="destructive" aria-label="Delete" onClick={() => void remove(row.original.id)}><Trash2Icon /></Button>,
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [password])
 
-  const stat = (f: Filter, label: string, value: number, tone: 'default' | 'success' | 'warning') => (
-    <StatCard label={label} value={value} tone={tone} selected={filter === f} onClick={() => setFilter(f)} />
-  )
+  const stats: Array<[string, number]> = [
+    ['All records', records.length],
+    ['Found in Snipe-IT', records.filter((r) => r.registered).length],
+    ['Unregistered', records.filter((r) => !r.registered).length],
+    ['Photos attached in Snipe-IT', records.filter((r) => r.snipeit_photo_uploaded).length],
+  ]
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        {stat('all', 'All records', records.length, 'default')}
-        {stat('registered', 'Found in Snipe-IT', records.filter((r) => r.registered).length, 'success')}
-        {stat('unregistered', 'Unregistered', records.filter((r) => !r.registered).length, 'warning')}
-        <StatCard label="Photos attached in Snipe-IT" value={records.filter((r) => r.snipeit_photo_uploaded).length} tone="info" />
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {stats.map(([label, value]) => (
+          <Card key={label} size="sm">
+            <CardHeader>
+              <CardDescription>{label}</CardDescription>
+              <CardTitle>{value}</CardTitle>
+            </CardHeader>
+          </Card>
+        ))}
       </div>
 
-      <div className="flex items-center gap-2">
-        <InputGroup className="h-11 min-w-0 flex-1 bg-card sm:max-w-sm">
-          <InputGroupAddon><SearchIcon /></InputGroupAddon>
-          <InputGroupInput type="search" placeholder="Search number, description, location, user" aria-label="Search no-QR records" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </InputGroup>
-        <Button size="touch" variant="outline" className="sm:ml-auto" onClick={() => void reload()}><RefreshCwIcon /> Refresh</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input type="search" className="w-full sm:max-w-sm" placeholder="Search number, description, location, user" aria-label="Search no-QR records" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger aria-label="Filter records"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All records</SelectItem>
+            <SelectItem value="registered">Found in Snipe-IT</SelectItem>
+            <SelectItem value="unregistered">Unregistered</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" onClick={() => void reload()}>Refresh</Button>
       </div>
 
       <DataTable
@@ -131,33 +143,26 @@ export function NoQrTab({ password, records, reload, confirm }: Props) {
         initialSort={[{ id: 'created_at', desc: true }]}
         getRowId={(r) => String(r.id)}
         emptyTitle="No records"
-        emptyDescription="Assets added with “No QR? Add with photo” in the scanner appear here."
+        emptyDescription="Assets added with “No QR? Add with photo” appear here."
         minWidth={1000}
       />
 
       <Dialog open={!!preview} onOpenChange={(o) => { if (!o) setPreview(null) }}>
-        <DialogContent className="max-h-[92dvh] gap-3 overflow-y-auto p-0 sm:max-w-3xl">
+        <DialogContent className="sm:max-w-2xl">
           {preview && (
             <>
-              <DialogHeader className="px-4 pt-4">
-                <DialogTitle>{preview.asset_number} – {preview.description}</DialogTitle>
-                <DialogDescription>{preview.registered ? `Registered (${preview.snipeit_asset_tag})` : 'Unregistered'} · {preview.location_name} · {formatDate(preview.created_at, true)}</DialogDescription>
+              <DialogHeader>
+                <DialogTitle>{preview.asset_number}: {preview.description}</DialogTitle>
+                <DialogDescription>
+                  {preview.registered ? `Registered (${preview.snipeit_asset_tag})` : 'Unregistered'}, {preview.location_name}, {preview.user_name}, {formatDate(preview.created_at, true)}
+                </DialogDescription>
               </DialogHeader>
-              <div className="flex justify-center bg-slate-950">
-                <img src={preview.photo_url ?? ''} alt={`Photo of ${preview.asset_number}`} className="max-h-[60dvh] w-auto max-w-full object-contain" />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-4 text-sm">
-                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-                  {([['Location check', preview.audit_status ? `${preview.audit_status} (recorded: ${preview.expected_location_name || '–'})` : null],
-                    ['Recorded by', preview.user_name], ['Notes', preview.notes]] as const)
-                    .filter(([, v]) => v).map(([k, v]) => (
-                      <div key={k} className="contents"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium">{v}</dd></div>
-                    ))}
-                </dl>
-                <Button asChild size="touch" variant="outline">
-                  <a href={preview.photo_url ?? '#'} target="_blank" rel="noopener"><ExternalLinkIcon /> Open full size</a>
+              <img src={preview.photo_url ?? ''} alt={`Photo of ${preview.asset_number}`} className="max-h-[60dvh] w-full rounded-md border object-contain" />
+              <DialogFooter>
+                <Button asChild variant="outline">
+                  <a href={preview.photo_url ?? '#'} target="_blank" rel="noopener">Open full size</a>
                 </Button>
-              </div>
+              </DialogFooter>
             </>
           )}
         </DialogContent>

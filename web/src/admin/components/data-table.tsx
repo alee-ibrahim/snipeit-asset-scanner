@@ -13,17 +13,15 @@ import {
 } from '@tanstack/react-table'
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
 
 /** Sortable column header (shadcn data-table pattern). */
 export function SortHeader<T>({ column, title }: { column: Column<T, unknown>; title: string }) {
   const dir = column.getIsSorted()
   return (
-    <Button variant="ghost" size="sm" className="-ml-2 h-8 px-2 text-xs font-semibold tracking-wide uppercase" onClick={() => column.toggleSorting(dir === 'asc')}>
+    <Button variant="ghost" size="sm" onClick={() => column.toggleSorting(dir === 'asc')}>
       {title}
-      {dir === 'asc' ? <ArrowUpIcon /> : dir === 'desc' ? <ArrowDownIcon /> : <ArrowUpDownIcon className="opacity-50" />}
+      {dir === 'asc' ? <ArrowUpIcon /> : dir === 'desc' ? <ArrowDownIcon /> : <ArrowUpDownIcon />}
     </Button>
   )
 }
@@ -59,41 +57,33 @@ export function DataTable<T>({
   })
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
-      <div className="max-h-[calc(100dvh-18rem)] overflow-auto max-sm:max-h-none">
-        <Table style={{ minWidth }}>
-          <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id} className="hover:bg-transparent">
-                {hg.headers.map((h) => (
-                  <TableHead key={h.id} className="h-10 px-2.5 text-xs font-semibold text-muted-foreground uppercase sm:px-3">
-                    {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} data-state={row.getIsSelected() ? 'selected' : undefined}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className={cn('px-2.5 py-2 text-[13px] sm:px-3 sm:text-sm')}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {data.length === 0 && (
-          <Empty className="py-10">
-            <EmptyHeader>
-              <EmptyTitle>{emptyTitle}</EmptyTitle>
-              {emptyDescription && <EmptyDescription>{emptyDescription}</EmptyDescription>}
-            </EmptyHeader>
-          </Empty>
-        )}
-      </div>
+    <div className="rounded-md border">
+      <Table style={{ minWidth }}>
+        <TableHeader>
+          {table.getHeaderGroups().map((hg) => (
+            <TableRow key={hg.id}>
+              {hg.headers.map((h) => (
+                <TableHead key={h.id}>{h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}</TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => (
+            <TableRow key={row.id} data-state={row.getIsSelected() ? 'selected' : undefined}>
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+              ))}
+            </TableRow>
+          )) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                {emptyTitle}{emptyDescription ? `. ${emptyDescription}` : ''}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   )
 }

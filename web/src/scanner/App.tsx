@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { DownloadIcon, ImageIcon, KeyboardIcon, LogOutIcon, PlusIcon, ScanLineIcon, ShieldIcon } from 'lucide-react'
+import { DownloadIcon, ImageIcon, KeyboardIcon, LogOutIcon, PlusIcon, ShieldIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -12,8 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { useConfirm } from '@/hooks/use-confirm'
@@ -247,61 +247,60 @@ export default function ScannerApp() {
 
   // ---- render ----
   return (
-    <div className="min-h-dvh bg-background pb-[env(safe-area-inset-bottom)]">
-      <header className="sticky top-0 z-40 flex items-center gap-2 bg-primary px-3 pt-[calc(env(safe-area-inset-top)+0.375rem)] pb-1.5 text-primary-foreground">
-        <ScanLineIcon className="size-6" aria-hidden />
-        <span className="mr-auto text-base font-bold">Asset Audit</span>
-        {user && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-touch" aria-label="Account menu" className="rounded-full hover:bg-white/15">
-                <Avatar className="size-9 border-2 border-white/40">
-                  <AvatarFallback className="bg-white/15 text-sm font-bold text-primary-foreground">{initials(user)}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel className="flex flex-col">
-                <span className="font-semibold">{userName}</span>
-                <span className="text-xs font-normal text-muted-foreground">{user.email}</span>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="min-h-11" onSelect={() => void exportMine()}><DownloadIcon /> Export my audits (Excel)</DropdownMenuItem>
-              <DropdownMenuItem className="min-h-11" asChild><a href="/admin"><ShieldIcon /> Admin dashboard</a></DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="min-h-11" variant="destructive" onSelect={() => void logout()}><LogOutIcon /> Log out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-40 border-b bg-background">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-2 px-4 py-2">
+          <span className="font-semibold">Asset Audit</span>
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Account menu">
+                  <Avatar size="sm"><AvatarFallback>{initials(user)}</AvatarFallback></Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <div>{userName}</div>
+                  <div className="text-xs text-muted-foreground">{user.email}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void exportMine()}><DownloadIcon /> Export my audits</DropdownMenuItem>
+                <DropdownMenuItem asChild><a href="/admin"><ShieldIcon /> Admin dashboard</a></DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => void logout()}><LogOutIcon /> Log out</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </header>
 
-      <main className="mx-auto flex max-w-lg flex-col gap-3 p-3 sm:gap-4 sm:p-4">
+      <main className="mx-auto flex max-w-lg flex-col gap-4 p-4">
         {!user && connecting && (
-          <Card size="sm" className="mt-6">
-            <CardHeader><Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-56" /></CardHeader>
+          <Card size="sm">
+            <CardHeader>
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
             <CardContent className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> Connecting with saved token…</CardContent>
           </Card>
         )}
 
         {!user && !connecting && (
-          <Card className="mt-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-xl font-bold">Asset Audit</CardTitle>
-              <CardDescription>Scan asset labels and check they're in the right place.</CardDescription>
+              <CardTitle>Connect to Snipe-IT</CardTitle>
+              <CardDescription>Enter your personal API token to start auditing.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form id="connect-form" onSubmit={(e) => { e.preventDefault(); if (tokenInput.trim()) void connect(tokenInput.trim()); else setSetupError('Please enter your API token') }}>
-                <Field data-invalid={!!setupError || undefined}>
-                  <FieldLabel htmlFor="api-token">Snipe-IT API token</FieldLabel>
-                  <Input id="api-token" type="password" autoComplete="off" className="h-11" placeholder="Paste your personal API token"
-                    value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} aria-invalid={!!setupError || undefined} />
-                  <FieldDescription>Snipe-IT: your name (top right) → Manage API Keys → Create New Token.</FieldDescription>
-                  {setupError && <FieldError>{setupError}</FieldError>}
-                </Field>
+              <form id="connect-form" className="grid gap-2" onSubmit={(e) => { e.preventDefault(); if (tokenInput.trim()) void connect(tokenInput.trim()); else setSetupError('Please enter your API token.') }}>
+                <Label htmlFor="api-token">API token</Label>
+                <Input id="api-token" type="password" autoComplete="off" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} aria-invalid={!!setupError || undefined} />
+                <p className="text-sm text-muted-foreground">In Snipe-IT: your name, Manage API Keys, Create New Token.</p>
+                {setupError && <p className="text-sm text-destructive" role="alert">{setupError}</p>}
               </form>
             </CardContent>
-            <CardFooter className="border-t-0 bg-transparent">
-              <Button type="submit" form="connect-form" size="touch-lg" className="w-full">Connect</Button>
+            <CardFooter>
+              <Button type="submit" form="connect-form" className="w-full">Connect</Button>
             </CardFooter>
           </Card>
         )}
@@ -309,26 +308,30 @@ export default function ScannerApp() {
         {user && (
           <>
             <LocationDrawer locations={locations} selected={location} open={locOpen} onOpenChange={setLocOpen} onSelect={selectLocation} />
-            <div className="flex items-center justify-between px-1 text-xs text-muted-foreground sm:text-sm">
-              <span>{auditCount ? `${auditCount} audit${auditCount === 1 ? '' : 's'} logged by you` : 'No audits logged yet'}</span>
-              {scanner.features?.resolution && <span>Camera {scanner.features.resolution}</span>}
-            </div>
+            <p className="text-sm text-muted-foreground">
+              {auditCount ? `${auditCount} audit${auditCount === 1 ? '' : 's'} logged by you` : 'No audits logged yet'}
+              {scanner.features?.resolution ? ` · Camera ${scanner.features.resolution}` : ''}
+            </p>
 
-            <div className={panel === 'scan' ? 'flex flex-col gap-3' : 'hidden'}>
+            <div className={panel === 'scan' ? 'flex flex-col gap-4' : 'hidden'}>
               <CameraCard scanner={scanner} canStart={!!location} onStart={() => void onStartScan()} />
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: 'Type tag / SAP #', icon: KeyboardIcon, tone: 'bg-muted text-primary', action: async () => { if (requireLocation() && await guardUnlogged()) setManualOpen(true) } },
-                  { label: 'Scan from photo', icon: ImageIcon, tone: 'bg-muted text-primary', action: async () => { if (requireLocation() && await guardUnlogged()) photoRef.current?.click() } },
-                  { label: 'No QR? Add with photo', icon: PlusIcon, tone: 'bg-success/15 text-success', action: async () => { if (requireLocation() && await guardUnlogged()) { await scanner.stop(); setNoqrOpen(true) } } },
-                ].map(({ label, icon: Icon, tone, action }) => (
-                  <Button key={label} variant="outline" onClick={() => void action()}
-                    className="h-auto min-h-[4.5rem] flex-col gap-1 rounded-xl bg-card px-1 py-2 text-xs leading-tight font-semibold whitespace-normal sm:text-sm">
-                    <span className={`flex size-8 items-center justify-center rounded-md ${tone}`}><Icon className="size-4" /></span>
-                    {label}
+              <Card size="sm">
+                <CardHeader>
+                  <CardTitle>Can't scan?</CardTitle>
+                  <CardDescription>Type the tag, read a photo of the label, or record an asset without a QR code.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                  <Button variant="outline" onClick={async () => { if (requireLocation() && await guardUnlogged()) setManualOpen(true) }}>
+                    <KeyboardIcon /> Type tag or SAP #
                   </Button>
-                ))}
-              </div>
+                  <Button variant="outline" onClick={async () => { if (requireLocation() && await guardUnlogged()) photoRef.current?.click() }}>
+                    <ImageIcon /> Scan from photo
+                  </Button>
+                  <Button variant="outline" onClick={async () => { if (requireLocation() && await guardUnlogged()) { await scanner.stop(); setNoqrOpen(true) } }}>
+                    <PlusIcon /> No QR? Add with photo
+                  </Button>
+                </CardContent>
+              </Card>
               <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden"
                 onChange={(e) => { void onPhotoScan(e.target.files?.[0]); e.target.value = '' }} />
             </div>

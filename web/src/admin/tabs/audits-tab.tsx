@@ -1,22 +1,19 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef, RowSelectionState } from '@tanstack/react-table'
-import { SearchIcon, Trash2Icon } from 'lucide-react'
+import { Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import type { useConfirm } from '@/hooks/use-confirm'
-import { adminApi, type AuditRecord } from '@/lib/api'
+import { adminApi, type AuditRecord, type AuditStatus } from '@/lib/api'
 import { formatDate, setStoredToken } from '@/lib/helpers'
-import { cn } from '@/lib/utils'
 import { DataTable, SortHeader } from '../components/data-table'
-import { StatCard, StatusBadgeClass } from '../components/stat-card'
 
 interface Props {
   password: string
@@ -25,6 +22,12 @@ interface Props {
   resolveToken: string
   setResolveToken: (t: string) => void
   confirm: ReturnType<typeof useConfirm>['confirm']
+}
+
+const statusVariant: Record<AuditStatus, 'default' | 'destructive' | 'secondary'> = {
+  match: 'default',
+  mismatch: 'destructive',
+  resolved: 'secondary',
 }
 
 export function AuditsTab({ password, audits, reload, resolveToken, setResolveToken, confirm }: Props) {
@@ -79,7 +82,7 @@ export function AuditsTab({ password, audits, reload, resolveToken, setResolveTo
   }
 
   const clearAll = async () => {
-    if (!(await confirm({ title: 'Delete ALL audit records?', description: 'This cannot be undone. Snipe-IT is not changed.', confirmLabel: 'Delete all' }))) return
+    if (!(await confirm({ title: 'Delete all audit records?', description: 'This cannot be undone. Snipe-IT is not changed.', confirmLabel: 'Delete all' }))) return
     for (const a of audits) await adminApi.deleteAudit(password, a.id).catch(() => {})
     await reload()
   }
@@ -90,18 +93,17 @@ export function AuditsTab({ password, audits, reload, resolveToken, setResolveTo
       header: ({ table }) => (
         <Checkbox
           aria-label="Select all mismatches"
-          className="size-5"
           checked={table.getIsAllRowsSelected() ? true : table.getIsSomeRowsSelected() ? 'indeterminate' : false}
           onCheckedChange={(v) => table.toggleAllRowsSelected(!!v)}
         />
       ),
       cell: ({ row }) => row.getCanSelect()
-        ? <Checkbox aria-label={`Select ${row.original.asset_tag}`} className="size-5" checked={row.getIsSelected()} onCheckedChange={(v) => row.toggleSelected(!!v)} />
+        ? <Checkbox aria-label={`Select ${row.original.asset_tag}`} checked={row.getIsSelected()} onCheckedChange={(v) => row.toggleSelected(!!v)} />
         : null,
       enableSorting: false,
     },
-    { accessorKey: 'created_at', header: ({ column }) => <SortHeader column={column} title="Date" />, cell: ({ row }) => <span className="whitespace-nowrap">{formatDate(row.original.created_at, true)}</span> },
-    { accessorKey: 'asset_tag', header: ({ column }) => <SortHeader column={column} title="Asset tag" />, cell: ({ row }) => <span className="font-mono font-semibold whitespace-nowrap">{row.original.asset_tag}</span> },
+    { accessorKey: 'created_at', header: ({ column }) => <SortHeader column={column} title="Date" />, cell: ({ row }) => formatDate(row.original.created_at, true) },
+    { accessorKey: 'asset_tag', header: ({ column }) => <SortHeader column={column} title="Asset tag" /> },
     { accessorKey: 'asset_name', header: ({ column }) => <SortHeader column={column} title="Asset name" />, cell: ({ row }) => row.original.asset_name || '–' },
     { accessorKey: 'sap_asset_number', header: ({ column }) => <SortHeader column={column} title="SAP #" />, cell: ({ row }) => row.original.sap_asset_number || '–' },
     { accessorKey: 'expected_location_name', header: ({ column }) => <SortHeader column={column} title="Expected" />, cell: ({ row }) => row.original.expected_location_name || '–' },
@@ -110,9 +112,9 @@ export function AuditsTab({ password, audits, reload, resolveToken, setResolveTo
       accessorKey: 'status',
       header: ({ column }) => <SortHeader column={column} title="Status" />,
       cell: ({ row }) => (
-        <div className="flex flex-col items-start gap-0.5">
-          <Badge variant="outline" className={cn('uppercase', StatusBadgeClass(row.original.status))}>{row.original.status}</Badge>
-          {row.original.resolved_at && <span className="text-[11px] whitespace-nowrap text-muted-foreground">by {row.original.resolved_by}, {formatDate(row.original.resolved_at, true)}</span>}
+        <div className="flex flex-col items-start gap-1">
+          <Badge variant={statusVariant[row.original.status]}>{row.original.status}</Badge>
+          {row.original.resolved_at && <span className="text-xs text-muted-foreground">by {row.original.resolved_by}, {formatDate(row.original.resolved_at, true)}</span>}
         </div>
       ),
     },
@@ -120,35 +122,50 @@ export function AuditsTab({ password, audits, reload, resolveToken, setResolveTo
     {
       accessorKey: 'snipeit_audit_posted',
       header: ({ column }) => <SortHeader column={column} title="Posted" />,
-      cell: ({ row }) => <span className={cn('font-semibold', row.original.snipeit_audit_posted ? 'text-success' : 'text-destructive')}>{row.original.snipeit_audit_posted ? 'Yes' : 'No'}</span>,
+      cell: ({ row }) => <Badge variant={row.original.snipeit_audit_posted ? 'secondary' : 'outline'}>{row.original.snipeit_audit_posted ? 'Yes' : 'No'}</Badge>,
     },
     {
       id: 'actions',
       header: 'Actions',
       cell: ({ row }) => (
-        <div className="flex gap-1.5">
-          {row.original.status === 'mismatch' && <Button size="sm" className="h-9" onClick={() => void resolve([row.original.id])}>Resolve</Button>}
-          <Button size="icon" variant="destructive" className="size-9" aria-label="Delete" onClick={() => void remove(row.original.id)}><Trash2Icon /></Button>
+        <div className="flex gap-2">
+          {row.original.status === 'mismatch' && <Button size="sm" onClick={() => void resolve([row.original.id])}>Resolve</Button>}
+          <Button size="icon-sm" variant="destructive" aria-label="Delete" onClick={() => void remove(row.original.id)}><Trash2Icon /></Button>
         </div>
       ),
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [resolveToken, password, audits])
 
+  const stats: Array<[string, number]> = [
+    ['Total audits', audits.length],
+    ['Matches', count('match')],
+    ['Mismatches', mismatches],
+    ['Resolved', count('resolved')],
+    ['Posted to Snipe-IT', audits.filter((a) => a.snipeit_audit_posted).length],
+  ]
+
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
-        <StatCard label="Total audits" value={audits.length} />
-        <StatCard label="Matches" value={count('match')} tone="success" />
-        <StatCard label="Mismatches" value={mismatches} tone="destructive" />
-        <StatCard label="Resolved" value={count('resolved')} tone="info" />
-        <StatCard label="Posted to Snipe-IT" value={audits.filter((a) => a.snipeit_audit_posted).length} />
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        {stats.map(([label, value]) => (
+          <Card key={label} size="sm">
+            <CardHeader>
+              <CardDescription>{label}</CardDescription>
+              <CardTitle>{value}</CardTitle>
+            </CardHeader>
+          </Card>
+        ))}
       </div>
 
       {mismatches > 0 && !resolveToken && (
-        <Card size="sm" className="bg-blue-50 ring-blue-200">
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Snipe-IT API token</CardTitle>
+            <CardDescription>Needed to resolve mismatches (updates the asset location in Snipe-IT).</CardDescription>
+          </CardHeader>
           <CardContent>
-            <form className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={(e) => {
+            <form id="resolve-token-form" className="grid gap-2" onSubmit={(e) => {
               e.preventDefault()
               const t = tokenInput.trim()
               if (!t) return
@@ -156,37 +173,20 @@ export function AuditsTab({ password, audits, reload, resolveToken, setResolveTo
               setStoredToken('audit_snipeit_token', t)
               toast.success('Token saved')
             }}>
-              <Field className="flex-1">
-                <FieldLabel htmlFor="resolve-token">Snipe-IT API token (needed to resolve mismatches)</FieldLabel>
-                <Input id="resolve-token" type="password" className="h-11 bg-card" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} />
-              </Field>
-              <Button type="submit" size="touch">Save token</Button>
+              <Label htmlFor="resolve-token">API token</Label>
+              <Input id="resolve-token" type="password" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} />
             </form>
           </CardContent>
-        </Card>
-      )}
-
-      {mismatches > 0 && (
-        <Card size="sm">
-          <CardContent className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-semibold">{selectedIds.length} selected</span>
-            <div className="flex gap-2">
-              <Button size="touch" disabled={!selectedIds.length || !resolveToken || resolving} onClick={() => void resolve(selectedIds)}>
-                {resolving && <Spinner />} Resolve selected
-              </Button>
-              <Button size="touch" variant="outline" onClick={() => setSelection({})}>Clear</Button>
-            </div>
-          </CardContent>
+          <CardFooter>
+            <Button type="submit" form="resolve-token-form">Save token</Button>
+          </CardFooter>
         </Card>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <InputGroup className="h-11 min-w-0 flex-1 basis-full bg-card sm:basis-auto sm:max-w-sm">
-          <InputGroupAddon><SearchIcon /></InputGroupAddon>
-          <InputGroupInput type="search" placeholder="Search tag, name or SAP #" aria-label="Search audits" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </InputGroup>
+        <Input type="search" className="w-full sm:max-w-sm" placeholder="Search tag, name or SAP #" aria-label="Search audits" value={search} onChange={(e) => setSearch(e.target.value)} />
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="h-11! flex-1 bg-card sm:w-40 sm:flex-none" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+          <SelectTrigger aria-label="Filter by status"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="match">Match</SelectItem>
@@ -194,9 +194,15 @@ export function AuditsTab({ password, audits, reload, resolveToken, setResolveTo
             <SelectItem value="resolved">Resolved</SelectItem>
           </SelectContent>
         </Select>
-        {audits.length > 0 && (
-          <Button size="touch" variant="destructive" className="sm:ml-auto" onClick={() => void clearAll()}><Trash2Icon /> Clear all</Button>
+        {mismatches > 0 && (
+          <>
+            <Button disabled={!selectedIds.length || !resolveToken || resolving} onClick={() => void resolve(selectedIds)}>
+              {resolving && <Spinner />} Resolve selected ({selectedIds.length})
+            </Button>
+            {selectedIds.length > 0 && <Button variant="outline" onClick={() => setSelection({})}>Clear selection</Button>}
+          </>
         )}
+        {audits.length > 0 && <Button variant="destructive" className="sm:ml-auto" onClick={() => void clearAll()}>Clear all</Button>}
       </div>
 
       <DataTable

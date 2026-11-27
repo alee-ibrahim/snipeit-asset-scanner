@@ -9,7 +9,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { buttonVariants } from '@/components/ui/button'
 
 interface ConfirmOptions {
   title: string
@@ -41,11 +40,8 @@ export function useConfirm() {
           <AlertDialogDescription>{opts?.description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className={buttonVariants({ variant: 'outline', size: 'touch' })}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className={buttonVariants({ variant: opts?.destructive === false ? 'default' : 'destructive', size: 'touch' })}
-            onClick={() => close(true)}
-          >
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant={opts?.destructive === false ? 'default' : 'destructive'} onClick={() => close(true)}>
             {opts?.confirmLabel ?? 'Confirm'}
           </AlertDialogAction>
         </AlertDialogFooter>

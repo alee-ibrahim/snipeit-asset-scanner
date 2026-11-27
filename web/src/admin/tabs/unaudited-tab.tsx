@@ -1,20 +1,18 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { DownloadIcon, RefreshCwIcon, SearchIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Field, FieldLabel } from '@/components/ui/field'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { adminApi, downloadBlob, type SnipeAssetRow, type SnipeAssetsResponse } from '@/lib/api'
 import { formatDate, getStoredToken, setStoredToken } from '@/lib/helpers'
 import { DataTable, SortHeader } from '../components/data-table'
-import { StatCard } from '../components/stat-card'
 
 type Filter = 'all' | 'never' | 'not-this-year' | 'overdue'
 
@@ -67,73 +65,87 @@ export function UnauditedTab({ password }: { password: string }) {
   }
 
   const columns = useMemo<ColumnDef<SnipeAssetRow, unknown>[]>(() => {
-    const text = (key: keyof SnipeAssetRow, title: string, mono = false): ColumnDef<SnipeAssetRow, unknown> => ({
+    const text = (key: keyof SnipeAssetRow, title: string): ColumnDef<SnipeAssetRow, unknown> => ({
       accessorKey: key,
       header: ({ column }) => <SortHeader column={column} title={title} />,
-      cell: ({ row }) => <span className={mono ? 'font-mono font-semibold whitespace-nowrap' : undefined}>{(row.original[key] as string) || '–'}</span>,
+      cell: ({ row }) => (row.original[key] as string) || '–',
     })
     return [
-      text('asset_tag', 'Asset tag', true), text('name', 'Name'), text('sap_asset_number', 'SAP #'), text('model', 'Model'),
+      text('asset_tag', 'Asset tag'), text('name', 'Name'), text('sap_asset_number', 'SAP #'), text('model', 'Model'),
       text('category', 'Category'), text('location', 'Location'), text('assigned_to', 'Assigned to'),
       {
         accessorKey: 'last_audit_date',
         header: ({ column }) => <SortHeader column={column} title="Last audit" />,
-        cell: ({ row }) => row.original.last_audit_date
-          ? <span className="whitespace-nowrap">{formatDate(row.original.last_audit_date)}</span>
-          : <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive uppercase">Never</Badge>,
+        cell: ({ row }) => row.original.last_audit_date ? formatDate(row.original.last_audit_date) : <Badge variant="destructive">Never</Badge>,
       },
-      { accessorKey: 'next_audit_date', header: ({ column }) => <SortHeader column={column} title="Next audit" />, cell: ({ row }) => <span className="whitespace-nowrap">{formatDate(row.original.next_audit_date)}</span> },
+      { accessorKey: 'next_audit_date', header: ({ column }) => <SortHeader column={column} title="Next audit" />, cell: ({ row }) => formatDate(row.original.next_audit_date) },
       text('status', 'Status'),
     ]
   }, [])
 
+  const stats: Array<[string, number]> = data ? [
+    ['Total assets', data.total],
+    ['Never audited', data.never_audited.length],
+    ['Not audited this year', data.not_audited_this_year.length],
+    ['Audit overdue', data.audit_overdue.length],
+  ] : []
+
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
-      <Card size="sm" className="bg-blue-50 ring-blue-200">
-        <CardContent>
-          <form className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={(e) => { e.preventDefault(); void fetchAssets(false) }}>
-            {!savedToken && (
-              <Field className="flex-1">
-                <FieldLabel htmlFor="assets-token">Snipe-IT API token (needed to fetch assets)</FieldLabel>
-                <Input id="assets-token" type="password" className="h-11 bg-card" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} />
-              </Field>
-            )}
-            <div className="flex gap-2">
-              <Button type="submit" size="touch" disabled={loading} className="flex-1 sm:flex-none">{loading && <Spinner />} {data ? 'Reload' : 'Fetch assets'}</Button>
-              {data && <Button type="button" size="touch" variant="outline" disabled={loading} onClick={() => void fetchAssets(true)}><RefreshCwIcon /> Refresh from Snipe-IT</Button>}
-            </div>
-          </form>
-        </CardContent>
+    <div className="flex flex-col gap-4">
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>Snipe-IT assets</CardTitle>
+          <CardDescription>Loads every asset from Snipe-IT to find ones not audited. Cached for 10 minutes.</CardDescription>
+        </CardHeader>
+        {!savedToken && (
+          <CardContent>
+            <form id="assets-form" className="grid gap-2" onSubmit={(e) => { e.preventDefault(); void fetchAssets(false) }}>
+              <Label htmlFor="assets-token">API token</Label>
+              <Input id="assets-token" type="password" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} />
+            </form>
+          </CardContent>
+        )}
+        <CardFooter className="gap-2">
+          <Button disabled={loading} onClick={() => void fetchAssets(false)}>{loading && <Spinner />} {data ? 'Reload' : 'Fetch assets'}</Button>
+          {data && <Button variant="outline" disabled={loading} onClick={() => void fetchAssets(true)}>Refresh from Snipe-IT</Button>}
+        </CardFooter>
       </Card>
 
       {data?.cached && !loading && (
-        <Alert className="border-success/30 bg-success/10 py-2">
+        <Alert>
           <AlertDescription>Loaded from cache ({data.cache_age} s old). Use “Refresh from Snipe-IT” for fresh data.</AlertDescription>
         </Alert>
       )}
 
       {loading && (
-        <div className="flex flex-col gap-2" aria-busy>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
-          <Skeleton className="h-64 rounded-xl" />
+        <div className="flex flex-col gap-4" aria-busy>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>
+          <Skeleton className="h-64" />
         </div>
       )}
 
       {data && !loading && (
         <>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-            <StatCard label="Total assets" value={data.total} tone="info" selected={filter === 'all'} onClick={() => setFilter('all')} />
-            <StatCard label="Never audited" value={data.never_audited.length} tone="destructive" selected={filter === 'never'} onClick={() => setFilter('never')} />
-            <StatCard label="Not audited this year" value={data.not_audited_this_year.length} tone="warning" selected={filter === 'not-this-year'} onClick={() => setFilter('not-this-year')} />
-            <StatCard label="Audit overdue" value={data.audit_overdue.length} selected={filter === 'overdue'} onClick={() => setFilter('overdue')} />
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {stats.map(([label, value]) => (
+              <Card key={label} size="sm">
+                <CardHeader>
+                  <CardDescription>{label}</CardDescription>
+                  <CardTitle>{value}</CardTitle>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <InputGroup className="h-11 min-w-0 flex-1 basis-full bg-card sm:basis-auto sm:max-w-sm">
-              <InputGroupAddon><SearchIcon /></InputGroupAddon>
-              <InputGroupInput type="search" placeholder="Search tag, name, SAP #, model, location" aria-label="Search assets" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </InputGroup>
-            <span className="text-sm text-muted-foreground">{sets[filter].title}: {rows.length}</span>
-            <Button size="touch" className="bg-success text-success-foreground hover:bg-success/90 sm:ml-auto" onClick={exportCsv}><DownloadIcon /> Export CSV</Button>
+            <Input type="search" className="w-full sm:max-w-sm" placeholder="Search tag, name, SAP #, model, location" aria-label="Search assets" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
+              <SelectTrigger aria-label="Filter assets"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(sets) as Filter[]).map((k) => <SelectItem key={k} value={k}>{sets[k].title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">{rows.length} assets</span>
+            <Button variant="outline" className="sm:ml-auto" onClick={exportCsv}>Export CSV</Button>
           </div>
           <DataTable columns={columns} data={rows} initialSort={[{ id: 'asset_tag', desc: false }]} getRowId={(r) => String(r.id)}
             emptyTitle="No assets match" emptyDescription="Try adjusting your filters or search term." minWidth={1100} />

@@ -31,10 +31,6 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
-        // 44px+ touch targets for the mobile scanner
-        touch: "h-11 gap-2 px-4 text-base",
-        "touch-lg": "h-12 gap-2 px-5 text-base font-semibold",
-        "icon-touch": "size-11",
       },
     },
     defaultVariants: {

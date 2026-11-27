@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TooltipProvider>
       <ScannerApp />
-      <Toaster theme="light" position="bottom-center" richColors closeButton />
+      <Toaster position="bottom-center" />
     </TooltipProvider>
   </StrictMode>,
 )
