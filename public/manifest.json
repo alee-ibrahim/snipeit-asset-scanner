@@ -1,11 +1,11 @@
 {
-  "name": "Snipe-IT Asset Scanner",
-  "short_name": "Asset Scanner",
+  "name": "Asset Audit (Snipe-IT)",
+  "short_name": "Asset Audit",
   "description": "Scan and audit assets with Snipe-IT",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1a73e8",
+  "background_color": "#f1f5f9",
+  "theme_color": "#334155",
   "orientation": "portrait",
   "icons": [
     {

@@ -10,3 +10,4 @@ db/*.db-journal
 README.md
 generate-icons.js
 *.md
+db/photos
